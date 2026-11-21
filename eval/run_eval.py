@@ -28,7 +28,7 @@ import json
 import os
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -105,6 +105,16 @@ def mark(value: bool | None) -> str:
 QUOTA_EXHAUSTED = threading.Event()
 QUOTA_MESSAGE: list[str] = []  # the first QuotaExhaustedError message, for the summary
 
+# Progress output, so a long run never looks stuck: which case each worker
+# thread is on, and a heartbeat while no case has finished.
+CURRENT = threading.local()
+HEARTBEAT_SECONDS = 30
+
+
+def announce_wait(reason: str, seconds: float) -> None:
+    case_id = getattr(CURRENT, "case_id", "?")
+    print(f"  ... {case_id}: waiting {seconds:.0f}s ({reason})", flush=True)
+
 
 def timing(log: dict | None) -> dict:
     """Where a case's time went, from the API calls and retries quota.call recorded.
@@ -145,6 +155,8 @@ def run_case(agent: SupportAgent, case: dict, use_judge: bool) -> dict:
     """
     if QUOTA_EXHAUSTED.is_set():
         return unscored(case, "SKIPPED", "daily Gemini quota exhausted earlier in this run")
+    CURRENT.case_id = case["id"]  # lets progress messages name the case
+    print(f"  ... started {case['id']}", flush=True)
     started = time.perf_counter()
     quota.start_tracking()  # records this case's API calls and retries (this thread only)
     try:
@@ -232,8 +244,10 @@ def main() -> None:
 
     # One client and one policy index, shared by all cases (both are read-only
     # here). Each case gets its own SupportAgent, i.e. its own conversation.
+    print("Loading the policy index (embeds the documents only if they changed)...", flush=True)
     base = SupportAgent.create()
     quota.track_sdk_retries()
+    quota.on_wait = announce_wait
     selection = "selected" if wanted else ("all" if args.all else "crucial")
     # Every setting that changes the agent's answers or speed, so the results
     # file says exactly what was run.
@@ -257,9 +271,15 @@ def main() -> None:
             pool.submit(run_case, SupportAgent(base.client, base.toolbox, base.model), case, not args.no_judge)
             for case in cases
         ]
-        for done, future in enumerate(as_completed(futures), start=1):
-            results.append(future.result())
-            print(report(results[-1], done, len(cases)), flush=True)
+        pending = set(futures)
+        while pending:
+            finished, pending = wait(pending, timeout=HEARTBEAT_SECONDS, return_when=FIRST_COMPLETED)
+            if not finished:
+                print(f"  ... still working: {len(results)}/{len(cases)} cases done, "
+                      f"{time.perf_counter() - started:.0f}s elapsed", flush=True)
+            for future in finished:
+                results.append(future.result())
+                print(report(results[-1], len(results), len(cases)), flush=True)
 
     order = {c["id"]: i for i, c in enumerate(cases)}
     results.sort(key=lambda r: order[r["id"]])  # stable order in the results file

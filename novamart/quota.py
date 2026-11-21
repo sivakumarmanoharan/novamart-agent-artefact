@@ -88,10 +88,18 @@ def stop_tracking() -> dict | None:
     return log
 
 
+# Optional progress hook, called as on_wait(reason, seconds) just before any
+# retry wait, so a caller (the eval) can say what it is waiting for instead of
+# going silent for up to a minute.
+on_wait: Callable[[str, float], None] | None = None
+
+
 def _record(kind: str, entry: dict) -> None:
     log = getattr(_local, "log", None)
     if log is not None:
         log[kind].append(entry)
+    if kind == "retries" and on_wait is not None:
+        on_wait(entry["reason"], entry["wait_seconds"])
 
 
 # The SDK retries 5xx errors and timeouts itself (tenacity) and logs each retry

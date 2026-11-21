@@ -59,6 +59,10 @@ FALLBACK_ANSWER = f"{REFUSAL_PHRASE}. I couldn't complete this request; please c
 
 CITATION_RE = re.compile(r"\[source:\s*([^\]]+)\]")
 
+# Longest wait for one Gemini response. The slowest normal request seen in eval
+# runs took 68 s; anything past this is treated as hung and retried.
+REQUEST_TIMEOUT_SECONDS = 120
+
 
 @dataclass
 class ToolCall:
@@ -114,6 +118,9 @@ def make_client() -> genai.Client:
         sys.exit("Set GEMINI_API_KEY first (free key: https://aistudio.google.com/apikey).")
     return genai.Client(
         http_options=types.HttpOptions(
+            # Without a timeout the SDK waits forever on a request the API never
+            # answers. Timeouts count as transient, so the SDK retries them below.
+            timeout=REQUEST_TIMEOUT_SECONDS * 1000,  # milliseconds
             retry_options=types.HttpRetryOptions(
                 attempts=3, initial_delay=2.0, max_delay=30.0,  # retries also use free-tier quota
                 http_status_codes=quota.SDK_RETRY_STATUS_CODES,

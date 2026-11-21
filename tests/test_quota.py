@@ -91,3 +91,14 @@ def test_sdk_retries_are_recorded_from_its_log():
     retry = log["retries"][0]
     assert retry["by"] == "sdk" and retry["wait_seconds"] == 4.1
     assert retry["reason"].startswith("ServerError: 503 UNAVAILABLE")
+
+
+def test_on_wait_hook_announces_retry_waits():
+    announced = []
+    quota.on_wait = lambda reason, seconds: announced.append((reason, seconds))
+    try:
+        fn, _ = failing_then([errors.ClientError(429, PER_MINUTE), "ok"])
+        quota.call("gemini-test", fn, sleep=lambda s: None)
+    finally:
+        quota.on_wait = None
+    assert announced == [("429 per-minute rate limit on gemini-test", 7.0)]

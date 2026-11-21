@@ -18,10 +18,17 @@
 
 ## 2. Connecting NovaMart's real data
 - **Policies**: keep the documents where policy owners already edit them
-  (SharePoint, Google Drive or Confluence) and connect them through Gemini
-  Enterprise connectors or a Vertex AI Search data store with scheduled sync.
-  Require an owner and a "last reviewed" date per document, and filter by
-  metadata (region, store type, effective date) so Quebec or holiday rules apply correctly.
+  (SharePoint, Google Drive, Confluence or Cloud Storage) and connect them
+  through Gemini Enterprise connectors or a Vertex AI Search data store with
+  scheduled sync. Require an owner and a "last reviewed" date per document, and
+  filter by metadata (region, store type, effective date) so Quebec or holiday
+  rules apply correctly.
+- **One knowledge base, kept current**: Vertex AI Search builds and maintains
+  the vector index itself. The documents stay the source of truth and are
+  re-indexed when they change, so answers come from the current version of a
+  policy, and the indexed documents become NovaMart's searchable knowledge base
+  for other tools too. Storing embeddings separately and permanently would risk
+  serving outdated policy.
 - **Orders**: call the order management system through an API layer (e.g.
   Apigee) with read-only scopes first, rate limits and a stable contract, never
   direct database access. Return only the fields the agent needs.
@@ -40,6 +47,9 @@
 - **Governance**: Cloud Audit Logs for every tool call, a named business owner
   for content, a change process for prompts and models (versioned, reviewed, gated by
   the eval), and a clear escalation path to the operations team.
+- **Personas and access**: use the roles NovaMart already manages as groups in
+  its identity provider (through Workforce Identity Federation). A role decides which features and data an employee can use: for example, store staff can look up orders, while only supervisors could approve refunds once actions are added. The check is
+  enforced in the backend APIs and tools. In addition to the guarding of backend APIs, hiding buttons in the UI would help improve the user experience .
 
 ## 4. Evaluating and monitoring quality over time
 - **Before launch**: grow the golden set from real historical tickets with the
