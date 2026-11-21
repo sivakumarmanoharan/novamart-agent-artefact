@@ -1,0 +1,11 @@
+flowchart LR
+    U["Store employee<br/>novamart/cli.py or novamart/web.py"] -->|question| G["Gemini<br/>system prompt + 2 tools<br/>novamart/agent.py"]
+    G -->|function call| TB["Toolbox<br/>novamart/tools.py"]
+    TB -->|search_policies| IDX["PolicyIndex<br/>cosine top-k, drop below MIN_SCORE<br/>novamart/retrieval.py"]
+    TB -->|get_order_status| ORD[("data/orders.json<br/>mock order API")]
+    IDX -->|"passages, or NO_RELEVANT_POLICY"| TB
+    ORD -->|"order record, or not found"| TB
+    TB -->|function response| G
+    DOCS["data/policies/*.md<br/>one chunk per section"] -.->|"Gemini embeddings<br/>cached in .cache/"| IDX
+    G -->|final answer| OUT["Answer with source citations,<br/>or fixed refusal + contact Operations"]
+    OUT --> U

@@ -1,0 +1,498 @@
+{
+  "model": "gemini-3.5-flash",
+  "judge_model": "gemini-3.5-flash-lite",
+  "min_score": 0.6,
+  "today": "2026-11-20",
+  "selection": "crucial",
+  "settings": {
+    "model": "gemini-3.5-flash",
+    "judge_model": null,
+    "thinking_budget": "0",
+    "embed_model": "gemini-embedding-001",
+    "embed_dim": 768,
+    "top_k": 4,
+    "min_score": 0.6,
+    "today": "2026-11-20",
+    "selection": "crucial",
+    "workers": 2
+  },
+  "started_at": "2026-11-21T01:34:30",
+  "total_seconds": 120.3,
+  "requests": 12,
+  "results": [
+    {
+      "id": "grounded-electronics-window",
+      "category": "grounded",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 6.1,
+      "checks": {
+        "refusal": true,
+        "tools": true,
+        "cites_source": true,
+        "citations_valid": true,
+        "key_facts": true
+      },
+      "answer": "Yes, the customer can return the opened tablet, and there is no restocking fee [source: returns-and-refunds#electronics].\n\n**Key Details:**\n* **Return Window:** Tablets fall under the electronics category, which has a 15-day return window [source: returns-and-refunds#electronics]. Since it was purchased 12 days ago (within 15 days), it is eligible for return. Furthermore, because it was purchased between November 1 and December 24, it also qualifies for NovaMart's holiday return extension, extending the return period until January 31 [source: returns-and-refunds#holiday-return-extension].\n* **Condition:** Opened electronics are accepted as long as all original accessories and packaging are included [source: returns-and-refunds#electronics].\n* **Restocking Fee:** A 15% restocking fee only applies to opened laptops and TVs; it does **not** apply to tablets [source: returns-and-refunds#electronics].",
+      "cited": [
+        "returns-and-refunds#electronics",
+        "returns-and-refunds#holiday-return-extension"
+      ],
+      "tool_calls": [
+        {
+          "name": "search_policies",
+          "args": {
+            "query": "tablet opened return restocking fee"
+          },
+          "result": {
+            "results": [
+              {
+                "source": "returns-and-refunds#electronics",
+                "document": "Returns and Refunds Policy",
+                "section": "Electronics",
+                "text": "Electronics (laptops, tablets, phones, TVs, cameras, game consoles) have a shorter **15-day** return window. Opened electronics are accepted if all accessories and packaging are included. A **15% restocking fee** applies to opened laptops and TVs unless the item is defective.",
+                "score": 0.745
+              },
+              {
+                "source": "returns-and-refunds#standard-return-window",
+                "document": "Returns and Refunds Policy",
+                "section": "Standard return window",
+                "text": "Most items can be returned within **30 days** of the purchase date (in-store) or the delivery date (online orders). The item must be in resalable condition with all original accessories. A receipt or order number is required for a refund to the original payment method.",
+                "score": 0.659
+              },
+              {
+                "source": "returns-and-refunds#non-returnable-items",
+                "document": "Returns and Refunds Policy",
+                "section": "Non-returnable items",
+                "text": "The following cannot be returned: gift cards, opened personal care products, underwear and swimwear with hygiene liners removed, perishable food, and clearance items marked \"Final Sale\".",
+                "score": 0.62
+              },
+              {
+                "source": "returns-and-refunds#holiday-return-extension",
+                "document": "Returns and Refunds Policy",
+                "section": "Holiday return extension",
+                "text": "Items purchased between **November 1 and December 24** can be returned until **January 31** of the following year. The electronics window is extended the same way. This extension does not apply to Final Sale items.",
+                "score": 0.619
+              }
+            ]
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 3,
+        "api_seconds": 6.1,
+        "rate_limit_wait_seconds": 0,
+        "retries": [],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 1.5
+          },
+          {
+            "model": "gemini-embedding-001",
+            "seconds": 0.8
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 3.8
+          }
+        ]
+      }
+    },
+    {
+      "id": "tool-in-transit",
+      "category": "tool",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 111.7,
+      "checks": {
+        "refusal": true,
+        "tools": true,
+        "cites_source": null,
+        "citations_valid": true,
+        "key_facts": true
+      },
+      "answer": "Order NM-10002 is currently **in transit**. \n\nHere are the details for the order:\n* **Status:** In Transit\n* **Carrier:** Purolator\n* **Tracking Number:** PUR998877665\n* **Estimated Delivery Date:** November 23, 2026\n* **Item:** NovaHome Stand Mixer",
+      "cited": [],
+      "tool_calls": [
+        {
+          "name": "get_order_status",
+          "args": {
+            "order_id": "NM-10002"
+          },
+          "result": {
+            "order_id": "NM-10002",
+            "status": "IN_TRANSIT",
+            "placed_on": "2026-11-17",
+            "estimated_delivery": "2026-11-23",
+            "carrier": "Purolator",
+            "tracking_number": "PUR998877665",
+            "items": [
+              {
+                "sku": "HOM-0332",
+                "name": "NovaHome Stand Mixer",
+                "category": "home",
+                "price": 249.0
+              }
+            ],
+            "shipping": "standard"
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 3,
+        "api_seconds": 61.8,
+        "rate_limit_wait_seconds": 50.0,
+        "retries": [
+          {
+            "by": "rate_limit",
+            "wait_seconds": 50.0,
+            "reason": "429 per-minute rate limit on gemini-3.5-flash"
+          }
+        ],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 38.0
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 0.6
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 23.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "tool-order-not-found",
+      "category": "tool",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 8.2,
+      "checks": {
+        "refusal": null,
+        "tools": true,
+        "cites_source": null,
+        "citations_valid": true,
+        "key_facts": true
+      },
+      "answer": "Order NM-99999 was not found in our system. Please check the order ID and try again.",
+      "cited": [],
+      "tool_calls": [
+        {
+          "name": "get_order_status",
+          "args": {
+            "order_id": "NM-99999"
+          },
+          "result": {
+            "error": "Order NM-99999 was not found."
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 2,
+        "api_seconds": 8.2,
+        "rate_limit_wait_seconds": 0,
+        "retries": [],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 3.1
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 5.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed-laptop-return",
+      "category": "mixed",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 7.7,
+      "checks": {
+        "refusal": true,
+        "tools": true,
+        "cites_source": true,
+        "citations_valid": true,
+        "key_facts": true
+      },
+      "answer": "**No, the customer is not eligible for a return.**\n\nHere are the details:\n* **Return Window:** Electronics, including laptops, have a 15-day return window [source: returns-and-refunds#electronics] starting from the delivery date for online orders [source: returns-and-refunds#standard-return-window].\n* **Calculation:** Order NM-10001 was delivered on November 6, 2026. The 15-day return window ended on **November 21, 2026** (or 14 days ago relative to today, November 20, 2026\u2014wait, November 6 + 15 days = November 21, 2026). \n\n*Correction on calculation:* Since today is November 20, 2026, it has been 14 days since delivery (November 6, 2026), which means the item is actually **within** the 15-day return window (expires November 21, 2026).\n\n**Yes, the customer is eligible for a return today, but a fee applies:**\n* **Eligibility:** Opened electronics are accepted within the 15-day window if all original packaging and accessories are included [source: returns-and-refunds#electronics].\n* **Restocking Fee:** A **15% restocking fee** applies to opened laptops unless the item is defective [source: returns-and-refunds#electronics].",
+      "cited": [
+        "returns-and-refunds#electronics",
+        "returns-and-refunds#standard-return-window"
+      ],
+      "tool_calls": [
+        {
+          "name": "get_order_status",
+          "args": {
+            "order_id": "NM-10001"
+          },
+          "result": {
+            "order_id": "NM-10001",
+            "status": "DELIVERED",
+            "placed_on": "2026-11-02",
+            "delivered_on": "2026-11-06",
+            "carrier": "Canada Post",
+            "tracking_number": "CP123456789CA",
+            "items": [
+              {
+                "sku": "LAP-1420",
+                "name": "Brightline 14\" Laptop",
+                "category": "electronics",
+                "price": 899.99
+              }
+            ],
+            "shipping": "standard"
+          }
+        },
+        {
+          "name": "search_policies",
+          "args": {
+            "query": "laptop opened return window restocking fee"
+          },
+          "result": {
+            "results": [
+              {
+                "source": "returns-and-refunds#electronics",
+                "document": "Returns and Refunds Policy",
+                "section": "Electronics",
+                "text": "Electronics (laptops, tablets, phones, TVs, cameras, game consoles) have a shorter **15-day** return window. Opened electronics are accepted if all accessories and packaging are included. A **15% restocking fee** applies to opened laptops and TVs unless the item is defective.",
+                "score": 0.745
+              },
+              {
+                "source": "returns-and-refunds#standard-return-window",
+                "document": "Returns and Refunds Policy",
+                "section": "Standard return window",
+                "text": "Most items can be returned within **30 days** of the purchase date (in-store) or the delivery date (online orders). The item must be in resalable condition with all original accessories. A receipt or order number is required for a refund to the original payment method.",
+                "score": 0.654
+              },
+              {
+                "source": "warranty-and-protection#cancelling-a-plan",
+                "document": "Warranty and NovaCare Protection Plans",
+                "section": "Cancelling a plan",
+                "text": "A NovaCare plan can be cancelled for a full refund within 30 days of purchase. After 30 days, the refund is prorated and no refund is given if a claim has been made.",
+                "score": 0.627
+              },
+              {
+                "source": "price-match#exclusions",
+                "document": "Price Match Policy",
+                "section": "Exclusions",
+                "text": "We do not match: Black Friday and Cyber Monday doorbuster prices, clearance or open-box prices, membership-only prices (e.g. Costco), bundle offers, financing offers, or prices that include a coupon.",
+                "score": 0.625
+              }
+            ]
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 3,
+        "api_seconds": 7.8,
+        "rate_limit_wait_seconds": 0,
+        "retries": [],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 2.4
+          },
+          {
+            "model": "gemini-embedding-001",
+            "seconds": 0.8
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 4.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "refuse-pets",
+      "category": "refusal",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 77.7,
+      "checks": {
+        "refusal": true,
+        "tools": null,
+        "cites_source": null,
+        "citations_valid": true,
+        "key_facts": null
+      },
+      "answer": "I can't find this in NovaMart's documentation. Please contact the Operations team through the Ops Portal for guidance on store pet policies.",
+      "cited": [],
+      "tool_calls": [
+        {
+          "name": "search_policies",
+          "args": {
+            "query": "dog pet service animal policy in store"
+          },
+          "result": {
+            "results": [
+              {
+                "source": "returns-and-refunds#returns-without-a-receipt",
+                "document": "Returns and Refunds Policy",
+                "section": "Returns without a receipt",
+                "text": "Without a receipt or order number, the customer may receive **store credit** at the item's lowest selling price in the last 60 days. A government-issued photo ID is required. Limit: three no-receipt returns per customer per 12 months.",
+                "score": 0.617
+              },
+              {
+                "source": "returns-and-refunds#standard-return-window",
+                "document": "Returns and Refunds Policy",
+                "section": "Standard return window",
+                "text": "Most items can be returned within **30 days** of the purchase date (in-store) or the delivery date (online orders). The item must be in resalable condition with all original accessories. A receipt or order number is required for a refund to the original payment method.",
+                "score": 0.614
+              },
+              {
+                "source": "returns-and-refunds#non-returnable-items",
+                "document": "Returns and Refunds Policy",
+                "section": "Non-returnable items",
+                "text": "The following cannot be returned: gift cards, opened personal care products, underwear and swimwear with hygiene liners removed, perishable food, and clearance items marked \"Final Sale\".",
+                "score": 0.614
+              },
+              {
+                "source": "employee-discount#family-members",
+                "document": "Employee Discount Policy",
+                "section": "Family members",
+                "text": "Employees may register one household member, who receives the same discount. The employee is responsible for their household member's use of the discount.",
+                "score": 0.611
+              }
+            ]
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 5,
+        "api_seconds": 17.8,
+        "rate_limit_wait_seconds": 60.0,
+        "retries": [
+          {
+            "by": "rate_limit",
+            "wait_seconds": 1.0,
+            "reason": "429 per-minute rate limit on gemini-3.5-flash"
+          },
+          {
+            "by": "rate_limit",
+            "wait_seconds": 59.0,
+            "reason": "429 per-minute rate limit on gemini-3.5-flash"
+          }
+        ],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 4.7
+          },
+          {
+            "model": "gemini-embedding-001",
+            "seconds": 0.6
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 0.7
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 0.6
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 11.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "refuse-near-miss-sick-days",
+      "category": "refusal",
+      "passed": true,
+      "status": "PASS",
+      "seconds": 20.5,
+      "checks": {
+        "refusal": true,
+        "tools": null,
+        "cites_source": null,
+        "citations_valid": true,
+        "key_facts": null
+      },
+      "answer": "I can't find this in NovaMart's documentation. Please contact the Operations team through the Ops Portal for assistance with employee leave and sick day policies.",
+      "cited": [],
+      "tool_calls": [
+        {
+          "name": "search_policies",
+          "args": {
+            "query": "sick days part-time employee discount time off leave policy"
+          },
+          "result": {
+            "results": [
+              {
+                "source": "employee-discount#eligibility",
+                "document": "Employee Discount Policy",
+                "section": "Eligibility",
+                "text": "All active employees are eligible from their first day. Part-time and seasonal employees are included. Contractors and agency staff are not eligible.",
+                "score": 0.708
+              },
+              {
+                "source": "employee-discount#discount-amount",
+                "document": "Employee Discount Policy",
+                "section": "Discount amount",
+                "text": "- **20%** off regular-priced merchandise.\n- **10%** off electronics, gift cards excluded.\n- The discount does not stack with clearance prices, price matches, or promotional coupons; the employee receives whichever price is lower.",
+                "score": 0.697
+              },
+              {
+                "source": "employee-discount#annual-limit",
+                "document": "Employee Discount Policy",
+                "section": "Annual limit",
+                "text": "The discount applies to up to **$3,000** of purchases per calendar year (pre-discount value).",
+                "score": 0.694
+              },
+              {
+                "source": "employee-discount#family-members",
+                "document": "Employee Discount Policy",
+                "section": "Family members",
+                "text": "Employees may register one household member, who receives the same discount. The employee is responsible for their household member's use of the discount.",
+                "score": 0.682
+              }
+            ]
+          }
+        }
+      ],
+      "requests": 2,
+      "judge": null,
+      "timing": {
+        "api_calls": 3,
+        "api_seconds": 20.5,
+        "rate_limit_wait_seconds": 0,
+        "retries": [],
+        "calls": [
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 6.5
+          },
+          {
+            "model": "gemini-embedding-001",
+            "seconds": 0.2
+          },
+          {
+            "model": "gemini-3.5-flash",
+            "seconds": 13.8
+          }
+        ]
+      }
+    }
+  ]
+}

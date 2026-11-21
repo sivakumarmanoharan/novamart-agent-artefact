@@ -1,0 +1,47 @@
+{
+  "NM-10001": {
+    "status": "DELIVERED",
+    "placed_on": "2026-11-02",
+    "delivered_on": "2026-11-06",
+    "carrier": "Canada Post",
+    "tracking_number": "CP123456789CA",
+    "items": [{"sku": "LAP-1420", "name": "Brightline 14\" Laptop", "category": "electronics", "price": 899.99}],
+    "shipping": "standard"
+  },
+  "NM-10002": {
+    "status": "IN_TRANSIT",
+    "placed_on": "2026-11-17",
+    "estimated_delivery": "2026-11-23",
+    "carrier": "Purolator",
+    "tracking_number": "PUR998877665",
+    "items": [{"sku": "HOM-0332", "name": "NovaHome Stand Mixer", "category": "home", "price": 249.00}],
+    "shipping": "standard"
+  },
+  "NM-10003": {
+    "status": "DELAYED",
+    "placed_on": "2026-11-01",
+    "estimated_delivery": "2026-11-07",
+    "carrier": "Canada Post",
+    "tracking_number": "CP555000111CA",
+    "carrier_note": "Address exception: unit number missing",
+    "items": [{"sku": "TOY-7781", "name": "Building Blocks Set (1,200 pcs)", "category": "toys", "price": 79.99}],
+    "shipping": "standard"
+  },
+  "NM-10004": {
+    "status": "PROCESSING",
+    "placed_on": "2026-11-20",
+    "items": [
+      {"sku": "APP-5510", "name": "Men's Winter Parka", "category": "apparel", "price": 189.00},
+      {"sku": "APP-5532", "name": "Wool Scarf", "category": "apparel", "price": 29.00}
+    ],
+    "shipping": "express"
+  },
+  "NM-10005": {
+    "status": "CANCELLED",
+    "placed_on": "2026-10-28",
+    "cancelled_on": "2026-10-29",
+    "refund_issued_on": "2026-10-29",
+    "items": [{"sku": "TV-6555", "name": "55\" 4K Smart TV", "category": "electronics", "price": 649.99}],
+    "shipping": "standard"
+  }
+}

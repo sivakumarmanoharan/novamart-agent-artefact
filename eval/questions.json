@@ -1,0 +1,192 @@
+{
+  "today": "2026-11-20",
+  "notes": "must_contain is a list of groups; each group passes if ANY of its strings appears (case-insensitive). expect_refusal null = not checked.",
+  "cases": [
+    {
+      "id": "grounded-electronics-window",
+      "crucial": true,
+      "category": "grounded",
+      "question": "A customer wants to return an opened tablet they bought 12 days ago. Can they, and is there a restocking fee?",
+      "reference": "Yes. Electronics have a 15-day return window, so 12 days is within it; opened electronics are accepted with all accessories and packaging. The 15% restocking fee only applies to opened laptops and TVs, so there is no fee for a tablet.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["returns-and-refunds#electronics"],
+      "must_contain": [["15"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-no-receipt",
+      "category": "grounded",
+      "question": "Customer has no receipt for a jacket. What can we offer them?",
+      "reference": "Store credit at the item's lowest selling price in the last 60 days, with government-issued photo ID; limit of three no-receipt returns per customer per 12 months.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["returns-and-refunds#returns-without-a-receipt"],
+      "must_contain": [["store credit"], ["ID"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-price-match-marketplace",
+      "category": "grounded",
+      "question": "Can we price match a third-party seller on Amazon?",
+      "reference": "No. Marketplace sellers such as third-party sellers on Amazon do not qualify for price matching.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["price-match#qualifying-competitors"],
+      "must_contain": [["marketplace", "third-party", "third party"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-price-match-approval",
+      "category": "grounded",
+      "question": "A price match difference is $250. Can I approve it myself?",
+      "reference": "No. Associates can approve price match differences up to $200; a $250 difference needs a store manager's approval.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["price-match#who-can-approve"],
+      "must_contain": [["manager"], ["200"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-novacare-accident",
+      "category": "grounded",
+      "question": "Does NovaCare cover a phone screen that cracked when the customer dropped it?",
+      "reference": "Yes, NovaCare covers one accidental damage claim (drops and spills) per plan term for laptops, tablets and phones.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["warranty-and-protection#novacare-protection-plans"],
+      "must_contain": [["accidental"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-employee-tv",
+      "category": "grounded",
+      "question": "What discount do I get as an employee on a TV?",
+      "reference": "10% off electronics such as TVs (not 20%, which is for regular-priced non-electronics merchandise). It does not stack with clearance, price matches or coupons, and counts toward the $3,000 annual limit.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["employee-discount#discount-amount"],
+      "must_contain": [["10%", "10 %", "10 percent"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-points-redeem",
+      "category": "grounded",
+      "question": "How many NovaRewards points does a customer need to get $10 off?",
+      "reference": "1,000 points = $10 off; points are redeemed in blocks of 1,000.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["novarewards-loyalty#redeeming-points"],
+      "must_contain": [["1,000", "1000"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-gift-card-scam",
+      "category": "grounded",
+      "question": "A customer wants to buy $1,500 in gift cards to pay the Canada Revenue Agency, who called them. What should I do?",
+      "reference": "Do not help with the purchase. Paying a government agency with gift cards is a common scam; politely explain this to the customer and alert the store manager.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["gift-cards#scams"],
+      "must_contain": [["scam"], ["manager"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "grounded-holiday-extension",
+      "category": "grounded",
+      "question": "A customer bought a blender on November 5, 2026. Until when can they return it?",
+      "reference": "Until January 31, 2027, because purchases between November 1 and December 24 get the holiday return extension.",
+      "expect_tools": ["search_policies"],
+      "expect_sources": ["returns-and-refunds#holiday-return-extension"],
+      "must_contain": [["january 31", "jan 31", "31 january", "2027-01-31"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "tool-in-transit",
+      "crucial": true,
+      "category": "tool",
+      "question": "Where is order NM-10002?",
+      "reference": "Order NM-10002 is IN_TRANSIT with Purolator (tracking PUR998877665), estimated delivery November 23, 2026.",
+      "expect_tools": ["get_order_status"],
+      "expect_sources": [],
+      "must_contain": [["purolator"], ["november 23", "nov 23", "2026-11-23", "23 november"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "tool-order-not-found",
+      "crucial": true,
+      "category": "tool",
+      "question": "What's the status of order NM-99999?",
+      "reference": "The order NM-99999 was not found. The assistant must not invent a status.",
+      "expect_tools": ["get_order_status"],
+      "expect_sources": [],
+      "must_contain": [["not found", "could not find", "couldn't find", "can't find", "cannot find", "no record"]],
+      "expect_refusal": null
+    },
+    {
+      "id": "mixed-laptop-return",
+      "crucial": true,
+      "category": "mixed",
+      "question": "The customer on order NM-10001 wants to return their laptop today. It has been opened. Are they eligible, and is there a fee?",
+      "reference": "Yes, eligible. The laptop was delivered on 2026-11-06, 14 days ago, inside the 15-day electronics window (and the order was placed in November, so the holiday extension to January 31 also applies). Because it is an opened laptop, a 15% restocking fee applies unless it is defective.",
+      "expect_tools": ["get_order_status", "search_policies"],
+      "expect_sources": ["returns-and-refunds#electronics"],
+      "must_contain": [["15%", "15 %", "15 percent"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "mixed-delayed-order",
+      "category": "mixed",
+      "question": "Order NM-10003 still hasn't arrived. What should I do?",
+      "reference": "The order is DELAYED (address exception: unit number missing), estimated delivery was November 7, more than 5 business days ago. Open a carrier trace in the Ops Portal; if it is not resolved within 3 business days the customer can choose a replacement or a full refund.",
+      "expect_tools": ["get_order_status", "search_policies"],
+      "expect_sources": ["shipping-and-orders#late-or-missing-packages"],
+      "must_contain": [["trace"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "mixed-cancel-processing",
+      "category": "mixed",
+      "question": "Can the customer still cancel order NM-10004?",
+      "reference": "Yes. The order is still PROCESSING, and orders can be cancelled while in PROCESSING.",
+      "expect_tools": ["get_order_status", "search_policies"],
+      "expect_sources": ["shipping-and-orders#cancelling-or-changing-an-order", "shipping-and-orders#order-status-meanings"],
+      "must_contain": [["processing"]],
+      "expect_refusal": false
+    },
+    {
+      "id": "refuse-pets",
+      "crucial": true,
+      "category": "refusal",
+      "question": "What is our policy on customers bringing dogs into the store?",
+      "reference": "Not covered by the documents: the assistant should decline and point to the Operations team.",
+      "expect_tools": [],
+      "expect_sources": [],
+      "must_contain": [],
+      "expect_refusal": true
+    },
+    {
+      "id": "refuse-competitor-policy",
+      "category": "refusal",
+      "question": "What is Best Buy's return policy for laptops?",
+      "reference": "Not covered by NovaMart documents: the assistant should decline rather than use outside knowledge.",
+      "expect_tools": [],
+      "expect_sources": [],
+      "must_contain": [],
+      "expect_refusal": true
+    },
+    {
+      "id": "refuse-near-miss-sick-days",
+      "crucial": true,
+      "category": "refusal",
+      "question": "How many sick days do part-time employees get?",
+      "reference": "Not covered: the employee documents only cover the employee discount. The assistant should decline.",
+      "expect_tools": [],
+      "expect_sources": [],
+      "must_contain": [],
+      "expect_refusal": true
+    },
+    {
+      "id": "refuse-off-topic",
+      "category": "refusal",
+      "question": "Write me a poem about Black Friday.",
+      "reference": "Off-topic request: the assistant should politely decline.",
+      "expect_tools": [],
+      "expect_sources": [],
+      "must_contain": [],
+      "expect_refusal": true
+    }
+  ]
+}

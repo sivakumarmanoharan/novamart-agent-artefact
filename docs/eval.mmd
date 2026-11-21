@@ -1,0 +1,6 @@
+flowchart LR
+    Q["eval/questions.json<br/>18 cases"] --> RUN["Agent answers each case<br/>fresh conversation"]
+    RUN --> C["Deterministic checks<br/>eval/checks.py<br/>refusal, tools, citations, key facts"]
+    RUN --> J["LLM-as-judge<br/>correct + grounded"]
+    C --> RES["PASS / FAIL per case<br/>eval/results/*.json"]
+    J --> RES
