@@ -10,9 +10,13 @@ QuotaExhaustedError straight away with a message that says which model ran
 out and when it resets, so the CLI, web UI and eval can tell the user plainly
 instead of hanging on retries or showing a raw API error.
 
+A 503 ("the model is experiencing high demand") is also handled here rather
+than by the SDK: `call()` waits longer between attempts (up to about 2 minutes
+in total) and then raises ModelOverloadedError.
+
 `call()` also records how long each API call took and every retry (its own
-per-minute waits and, with track_sdk_retries(), the SDK's 5xx retries), so the
-eval can show where a slow case spent its time.
+per-minute and overload waits and, with track_sdk_retries(), the SDK's other
+5xx retries), so the eval can show where a slow case spent its time.
 """
 
 from __future__ import annotations
@@ -27,12 +31,32 @@ from google.genai import errors
 
 T = TypeVar("T")
 
-# Status codes the SDK retries by itself. 429 is deliberately left out so that
-# it reaches `call()` below, which knows the difference between the two limits.
-SDK_RETRY_STATUS_CODES = [408, 500, 502, 503, 504]
+# Status codes the SDK retries by itself, quickly (a few seconds apart). Two are
+# deliberately left out so they reach `call()` below:
+#   429: call() knows the difference between per-minute and per-day limits;
+#   503 ("model is experiencing high demand"): a demand spike lasts longer than
+#        the SDK's short backoff, so call() waits longer between attempts.
+SDK_RETRY_STATUS_CODES = [408, 500, 502, 504]
 
 RATE_LIMIT_RETRIES = 5   # per-minute 429s retried at most this many times
 MAX_WAIT_SECONDS = 60.0  # never sleep longer than this for a per-minute limit
+
+# Waits before each retry of a 503, so one call rides out about 2 minutes of
+# overload (5 attempts) before giving up with ModelOverloadedError.
+OVERLOAD_WAITS = [5.0, 15.0, 45.0, 60.0]
+
+
+class ModelOverloadedError(RuntimeError):
+    """The model kept answering 503 UNAVAILABLE (high demand) after every retry."""
+
+    def __init__(self, model: str, attempts: int, waited_seconds: float):
+        self.model = model
+        super().__init__(
+            f"Gemini model '{model}' is overloaded (503 UNAVAILABLE, high demand): "
+            f"{attempts} attempts failed over {waited_seconds:.0f}s of waiting. Spikes are "
+            "usually temporary: try again later (in the eval, --resume re-runs only the "
+            "cases that didn't finish)."
+        )
 
 
 class QuotaExhaustedError(RuntimeError):
@@ -132,26 +156,41 @@ def track_sdk_retries() -> None:
 
 
 def call(model: str, fn: Callable[[], T], sleep: Callable[[float], None] = time.sleep) -> T:
-    """Run one Gemini API call with quota-aware handling of HTTP 429."""
-    for attempt in range(RATE_LIMIT_RETRIES + 1):
+    """Run one Gemini API call, handling HTTP 429 (quota) and 503 (overload)."""
+    rate_limited = overloaded = 0
+    overload_waited = 0.0
+    while True:
         started = time.perf_counter()
         try:
             return fn()
-        except errors.ClientError as exc:
+        except errors.APIError as exc:
             error = exc
         finally:
             # Includes any SDK retries and their waits inside fn().
             _record("calls", {"model": model, "seconds": round(time.perf_counter() - started, 1)})
-        if getattr(error, "code", None) != 429:
+        code = getattr(error, "code", None)
+
+        if code == 503:  # model overloaded: wait longer each time, then give up
+            if overloaded == len(OVERLOAD_WAITS):
+                raise ModelOverloadedError(model, overloaded + 1, overload_waited) from error
+            wait = OVERLOAD_WAITS[overloaded]
+            overloaded += 1
+            overload_waited += wait
+            _record("retries", {"by": "overload", "wait_seconds": wait,
+                                "reason": f"503 model overloaded ({model})"})
+            sleep(wait)
+            continue
+
+        if code != 429:
             raise error
         text = str(error)
         delay = retry_after_seconds(text)
         if is_daily_quota(text):
             raise QuotaExhaustedError(model, delay) from error
-        if attempt == RATE_LIMIT_RETRIES:
+        if rate_limited == RATE_LIMIT_RETRIES:
             raise error
-        wait = min(delay or 2.0 * 2**attempt, MAX_WAIT_SECONDS)
+        wait = min(delay or 2.0 * 2**rate_limited, MAX_WAIT_SECONDS)
+        rate_limited += 1
         _record("retries", {"by": "rate_limit", "wait_seconds": round(wait, 1),
                             "reason": f"429 per-minute rate limit on {model}"})
         sleep(wait)
-    raise AssertionError("unreachable")

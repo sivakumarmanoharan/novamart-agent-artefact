@@ -12,7 +12,7 @@ import json
 import sys
 
 from novamart.agent import SupportAgent, Turn
-from novamart.quota import QuotaExhaustedError
+from novamart.quota import ModelOverloadedError, QuotaExhaustedError
 
 
 def print_turn(turn: Turn, trace: bool) -> None:
@@ -24,12 +24,15 @@ def print_turn(turn: Turn, trace: bool) -> None:
 
 
 def ask_and_print(agent: SupportAgent, question: str, trace: bool) -> bool:
-    """Ask one question; on an exhausted daily quota, say so and return False."""
+    """Ask one question; on an exhausted quota or overloaded model, say so and return False."""
     try:
         print_turn(agent.ask(question), trace)
         return True
     except QuotaExhaustedError as exc:
         print(f"\n!!! QUOTA EXHAUSTED: {exc}\n", file=sys.stderr)
+        return False
+    except ModelOverloadedError as exc:
+        print(f"\n!!! MODEL OVERLOADED: {exc}\n", file=sys.stderr)
         return False
 
 

@@ -102,3 +102,28 @@ def test_on_wait_hook_announces_retry_waits():
     finally:
         quota.on_wait = None
     assert announced == [("429 per-minute rate limit on gemini-test", 7.0)]
+
+
+OVERLOADED_503 = {"error": {"code": 503, "status": "UNAVAILABLE",
+                            "message": "This model is currently experiencing high demand."}}
+
+
+def test_overload_waits_longer_each_time_then_succeeds():
+    waits = []
+    fn, calls = failing_then([errors.ServerError(503, OVERLOADED_503),
+                              errors.ServerError(503, OVERLOADED_503), "ok"])
+    assert quota.call("gemini-test", fn, sleep=waits.append) == "ok"
+    assert waits == [5.0, 15.0] and len(calls) == 3
+
+
+def test_overload_that_outlasts_every_retry_raises_model_overloaded():
+    waits = []
+    fn, calls = failing_then([errors.ServerError(503, OVERLOADED_503)] * 5)
+    with pytest.raises(quota.ModelOverloadedError) as info:
+        quota.call("gemini-test", fn, sleep=waits.append)
+    assert waits == quota.OVERLOAD_WAITS and len(calls) == 5
+    assert "gemini-test" in str(info.value) and "--resume" in str(info.value)
+
+
+def test_503_is_not_left_to_the_sdks_short_retries():
+    assert 503 not in quota.SDK_RETRY_STATUS_CODES

@@ -10,11 +10,12 @@ Google AI Studio API key, with no agent framework. The agent core is about 670
 lines of commented Python (about 920 with the CLI and web UI). You can use it
 from the command line or a small browser UI.
 
-**Status.** 13 offline tests pass. The 6 crucial eval cases pass their
-deterministic checks against the live API (see [Results](#results)). One known
-quality issue: the order-plus-policy answer reaches the right conclusion but
-contradicts itself on the way. The LLM judge and the other 12 eval cases have
-not been run yet (see [Limits](#limits)).
+**Status.** 22 offline tests pass. All 6 crucial eval cases pass every
+deterministic check and both LLM-judge checks against the live API (see
+[Results](#results)). One known quality
+issue, which neither the checks nor the judge catch: the order-plus-policy
+answer reaches the right conclusion but opens with the wrong one and corrects
+itself. The 12 non-crucial cases have not been run (see [Limits](#limits)).
 
 ```mermaid
 flowchart LR
@@ -42,12 +43,13 @@ pip install -r requirements.txt
 cp .env.example .env                                 # Windows: Copy-Item .env.example .env
 # then put your key in .env (it is git-ignored)
 
-python -m pytest -q                 # 13 offline tests, no key needed
+python -m pytest -q                 # 22 offline tests, no key needed
 python -m novamart.cli --trace      # chat; --trace shows tool calls
 python -m novamart.cli -q "Can a customer return an opened laptop?"
 python -m novamart.web              # browser UI at http://127.0.0.1:8000 (--port to change)
 python -m eval.run_eval --no-judge --workers 2   # 6 crucial cases, fits the free tier
 python -m eval.run_eval --all       # all 18 cases + LLM judge (needs more than the free quota)
+python -m eval.run_eval --resume    # re-run only the cases the last run couldn't score (same flags)
 ```
 
 The key is read from `.env` (via `python-dotenv`) or from a `GEMINI_API_KEY`
@@ -100,9 +102,16 @@ server keeps at most 200 conversations in memory.
 
 Every Gemini call goes through `novamart/quota.py`:
 
-- **Server errors and hung requests** (408, 5xx, or no response within
-  120 s): the SDK retries up to 3 attempts with backoff. Without the 120 s
-  limit, a request the API never answers would block a run indefinitely.
+- **Model overloaded** (HTTP 503, "the model is experiencing high demand"):
+  this is load on Google's side for that model, not a limit on the key or
+  project, so a different key doesn't help. The agent waits 5, 15, 45 and 60 s
+  between attempts, about 2 minutes in total, then reports
+  `!!! MODEL OVERLOADED`. The SDK's own retries are only a few seconds apart,
+  too short for a demand spike.
+- **Other server errors and hung requests** (408, 500, 502, 504, or no
+  response within 120 s): the SDK retries up to 3 attempts with backoff.
+  Without the 120 s limit, a request the API never answers would block a run
+  indefinitely.
 - **Per-minute rate limits** (HTTP 429): wait the delay the API suggests (at
   most 60 s) and retry, up to 5 times.
 - **Daily quota used up** (HTTP 429, per-day quota): retrying can't help, so
@@ -131,7 +140,7 @@ are per model), or enable billing.
 | `eval/questions.json` | 18 test cases with reference answers and expectations |
 | `eval/checks.py`, `eval/run_eval.py` | Deterministic checks, LLM-as-judge, report |
 | `eval/results/*.json` | One file per eval run |
-| `tests/test_offline.py`, `tests/test_quota.py` | Unit tests: chunking, tools, citations, eval checks, the agent loop against a scripted fake Gemini, quota handling |
+| `tests/test_offline.py`, `tests/test_quota.py`, `tests/test_eval_resilience.py` | Unit tests: chunking, tools, citations, eval checks, the agent loop against a scripted fake Gemini, quota and overload handling, the eval's pause/stop policy and `--resume` |
 | `PRODUCTION_NOTE.md` | How I would take this to production on Google Cloud |
 
 ## Key decisions
@@ -227,8 +236,20 @@ Each case passes only if everything applicable passes:
 run writes `eval/results/<timestamp>.json` with the run's settings (models,
 thinking budget, retrieval settings, workers, total time and requests) and, for
 each case, the checks, answer, citations, tool calls, judge reasons, and a
-timing block listing every API call and every retry. If the daily quota runs
-out mid-run, the remaining cases are skipped and the file is still written.
+timing block listing every API call and every retry. The file is written even
+when a run is cut short:
+
+- **Daily quota used up:** the remaining cases are skipped.
+- **Model overloaded:** if a case still fails after the 503 retries, the run
+  pauses 3 minutes before the next case. If that case is overloaded too, the
+  run stops and skips the rest, because further requests would only use up
+  quota.
+- **`--resume`** re-runs only the cases from the newest results file that got
+  no result (`ERROR`, `QUOTA`, `OVERLOADED`, `SKIPPED`), keeps every `PASS` and
+  `FAIL`, and writes a merged file. It refuses to run if the settings differ
+  from the original run (model, judge, thinking budget, retrieval settings),
+  so a merged file never mixes two configurations. Use the same `.env` and
+  flags as the original run.
 
 The 6 crucial cases cover one behaviour each:
 
@@ -243,56 +264,78 @@ The 6 crucial cases cover one behaviour each:
 
 ### Results
 
-2026-11-21, `gemini-3.5-flash`, thinking budget `0`, `--no-judge`, 2 workers:
-**6/6 passed** in 120 s using 12 chat-model requests (grounded 1/1, tool 2/2,
-refusal 2/2, mixed 1/1). Full output: `eval/results/20261121-013631.json`.
+2026-11-21, `gemini-3.5-flash`, judge `gemini-3.5-flash-lite`, thinking
+budget `0`, 1 worker: **6/6 passed** every deterministic check and both judge
+checks (`correct` and `grounded`): grounded 1/1, tool 2/2, mixed 1/1,
+refusal 2/2. The run (03:38) scored 5 cases before the daily quota ran out;
+`--resume` (03:57) ran the sixth and merged it in. 22 minutes in total, 21 chat
+and judge requests. Full output: `eval/results/20261121-040427.json`.
 Abridged terminal output:
 
 ```text
-[1/6] PASS grounded-electronics-window (grounded, 6.1s)
-  time in API: 6.1s over 3 calls (gemini-3.5-flash 1.5s, gemini-embedding-001 0.8s, gemini-3.5-flash 3.8s)
-[2/6] PASS tool-order-not-found (tool, 8.2s)
-  time in API: 8.2s over 2 calls (gemini-3.5-flash 3.1s, gemini-3.5-flash 5.1s)
-[3/6] PASS mixed-laptop-return (mixed, 7.7s)
-  cited: ['returns-and-refunds#electronics', 'returns-and-refunds#standard-return-window']
-[4/6] PASS refuse-pets (refusal, 77.7s)
-  retries: 2 - rate_limit: 429 per-minute rate limit on gemini-3.5-flash (waited 1.0s); ... (waited 59.0s)
-[5/6] PASS tool-in-transit (tool, 111.7s)
-  time in API: 61.8s over 3 calls (gemini-3.5-flash 38.0s, gemini-3.5-flash 0.6s, gemini-3.5-flash 23.2s)
-  retries: 1 - rate_limit: 429 per-minute rate limit on gemini-3.5-flash (waited 50.0s)
-[6/6] PASS refuse-near-miss-sick-days (refusal, 20.5s)
+[1/6] PASS grounded-electronics-window (grounded, 213.4s)
+  refusal=ok  tools=ok  cites_source=ok  citations_valid=ok  key_facts=ok  judge_correct=ok  judge_grounded=ok
+  judge: The assistant's answer correctly matches the reference answer on all facts and is fully supported by the retrieved policy evidence.
+[2/6] PASS tool-in-transit (tool, 232.2s)
+  retries: 2 - overload: 503 model overloaded (gemini-3.5-flash) (waited 5.0s); sdk: ServerError: 500 INTERNAL ... (waited 2.5s)
+  judge: The assistant's answer accurately reflects all details from the evidence and aligns with the reference answer.
+[3/6] PASS tool-order-not-found (tool, 54.7s)
+  judge: The assistant correctly communicated that the order was not found based on the tool result and did not invent any false status.
+[4/6] PASS mixed-laptop-return (mixed, 229.4s)
+  cited: ['returns-and-refunds#electronics', 'returns-and-refunds#holiday-return-extension', 'returns-and-refunds#standard-return-window']
+  judge: The assistant correctly concluded that the customer is eligible for a return under the holiday extension policy and subject to a 15% restocking fee, and every claim is fully supported by the retrieved evidence.
+[5/6] PASS refuse-pets (refusal, 158.2s)
+  judge: The assistant correctly declined to answer due to a lack of information in the documents and appropriately referred the user to the Operations team, perfectly matching the reference answer.
 
-Gemini requests used: 12 (free tier: about 20 per model per day; embeddings are cached)
-API calls incl. query embeddings: 19; retries: 3 (sdk 0, rate limit 3), 110s spent waiting
+!!! QUOTA EXHAUSTED: Daily Gemini quota exhausted for model 'gemini-3.5-flash' (AI Studio free tier). It resets in about 22h 06m. ...
+[6/6] QUOTA refuse-near-miss-sick-days (refusal, 0.1s)
+API calls incl. query embeddings: 24; retries: 6 (sdk 3, rate limit 0, overload 3), 23s spent waiting
+
+$ python -m eval.run_eval --workers 1 --resume
+Resuming 20261121-035302.json: keeping 5 result(s), re-running 1 case(s).
+[1/1] PASS refuse-near-miss-sick-days (refusal, 420.8s)
+  refusal=ok  tools=-  cites_source=-  citations_valid=ok  key_facts=-  judge_correct=ok  judge_grounded=ok
+  retries: 2 - sdk: ServerError: 504 DEADLINE_EXCEEDED ... (waited 2.4s); sdk: ServerError: 504 DEADLINE_EXCEEDED ... (waited 2.7s)
+  judge: The assistant correctly declined to answer because the documents do not cover sick days, and appropriately suggested contacting Operations.
+
+=== Summary === 
+overall    6/6
 ```
 
 What this run shows:
 
-- **The citation rule held.** `mixed-laptop-return` cited only policy sections.
-- **A pass is not the same as a good answer.** That answer opens with "**No,
-  the customer is not eligible for a return**", corrects itself halfway through
-  ("…wait, November 6 + 15 days = November 21") and ends with "Yes", with the
-  15% restocking fee. The conclusion is right, but it misses the holiday
-  extension, which keeps the laptop returnable until January 31. The
-  deterministic checks test facts and citations, not consistency, so they pass
-  it. This is the case for testing a thinking budget (Key decision 8) and
-  adding a contradiction check.
-- **The tablet trap** was answered correctly ("does **not** apply to tablets");
-  without the judge, that is confirmed by reading the answer.
-- **Most of the time was spent waiting on the per-minute rate limit.** Cases
-  with no retries took 6–21 s. Two cases waited 50–60 s after per-minute 429s
-  (two workers send requests in bursts). Single slow requests also happen (38 s
-  in `tool-in-transit`). Query embeddings took under 1 s, and the tools run
-  locally in no measurable time.
+- **The judge agrees with the deterministic checks** on all 6 cases, and its
+  reasons name the specific facts it checked, such as no restocking fee on a
+  tablet, or that the order wasn't found and no status was invented.
+- **The judge missed a self-contradicting answer.** The `mixed-laptop-return`
+  answer opens with "**No, the customer is not eligible** for a return",
+  stops to say "*Wait, let me double check the math*", and ends with "Yes, they
+  are eligible … under the Holiday Return Extension", with the 15% restocking
+  fee. Its final conclusion and every fact are right: this time it applied the
+  holiday extension (returnable until January 31, 2027) and cited it. The judge
+  grades whether the facts that matter are right and grounded, not whether the
+  answer is consistent, so it passed the answer, as the deterministic checks
+  did. An employee who read only the first line would get the wrong answer.
+  This is the most important gap the eval found (see [Limits](#limits)).
+- **The citation rule held.** No answer cited a tool.
+- **Overload handling worked.** Across both runs there were 3 overload (503)
+  waits and 5 SDK retries on 500/504 errors, and every one recovered. Google was
+  under heavy load: single requests took up to 220 s (2–6 s on a quiet run),
+  which is why the runs took 22 minutes. Judge requests took 1–6 s each.
+- **`--resume` worked as designed.** After the quota ran out, it re-ran only
+  the missing case (4 requests) instead of all 6, and kept the 5 earlier
+  results.
 
 ### Limits
 
-- **Not yet run:** the LLM judge, and the 12 non-crucial cases. With the judge
-  on, the 6 crucial cases need about 12 Flash plus 6 Flash-Lite requests
-  (`python -m eval.run_eval --workers 2`); `--all` needs about 60.
+- **Not yet run:** the 12 non-crucial cases. `--all` needs about 60
+  requests, more than the free tier allows in a day.
+- **Nothing checks that an answer is consistent with itself.** Neither the
+  deterministic checks nor the judge do, so an answer that opens with the wrong
+  conclusion can pass (see Results).
 - 18 cases is a smoke test, not a benchmark, and one run doesn't show variance.
 - Key-fact checks are substring matches, so some traps are only caught by the
-  judge, and nothing checks that an answer is consistent with itself.
+  judge.
 - The judge (Flash-Lite) is from the same model family as the agent; set
   `GEMINI_JUDGE_MODEL` to use a different one.
 
@@ -311,8 +354,9 @@ What this run shows:
 ## What I would do with more time
 
 - **Fix the self-correcting answers**: test a thinking budget on the mixed
-  cases over several runs, and add a check that an answer doesn't contradict
-  itself. Confirm the citation fix over a few more runs.
+  cases over several runs, and catch the problem in the eval: give the judge a
+  third rating, `consistent` (the answer leads with its conclusion and doesn't
+  contradict itself). Confirm the citation fix over a few more runs.
 - **Calibrate the refusal threshold** on a labelled set of answerable and
   unanswerable questions instead of a reasonable first guess (0.60); the helper
   `python -m novamart.retrieval "<question>"` prints raw scores for this.
