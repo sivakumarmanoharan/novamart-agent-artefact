@@ -70,7 +70,7 @@ environment variable (in the shell or in `.env`):
 |---|---|---|
 | `GEMINI_MODEL` | `gemini-3.5-flash` | Chat model the agent uses ([why](#key-decisions)) |
 | `GEMINI_JUDGE_MODEL` | `gemini-3.5-flash-lite` | Model used as LLM-as-judge in the eval |
-| `GEMINI_THINKING_BUDGET` | unset (model default) | Cap on the model's thinking tokens. The eval runs used `0` ([why](#key-decisions)) |
+| `GEMINI_THINKING_BUDGET` | `0` (thinking off) | Cap on the model's thinking tokens; empty = model default ([why](#key-decisions)) |
 | `GEMINI_EMBED_MODEL` / `GEMINI_EMBED_DIM` | `gemini-embedding-001` / `768` | Embedding model and size |
 | `NOVAMART_TOP_K` | `4` | Passages returned per search |
 | `NOVAMART_MIN_SCORE` | `0.60` | Minimum cosine similarity for a passage to count as relevant |
@@ -172,14 +172,18 @@ Scam reports
    units, and each is embedded with its document title and heading so
    "Eligibility" keeps its context. Embeddings use the `RETRIEVAL_DOCUMENT` /
    `RETRIEVAL_QUERY` task types.
-4. **Two layers of refusal.** (a) The search tool drops passages below a
-   cosine-similarity threshold and returns an explicit `NO_RELEVANT_POLICY`
-   signal when nothing is left. (b) The prompt tells the model to answer only
-   from returned passages and, when they don't answer the question, to open
-   with a fixed sentence: *"I can't find this in NovaMart's documentation."*
-   Layer (b) catches near misses that pass the threshold (e.g. "sick days for
-   part-time employees" retrieves the employee-discount doc). The fixed phrase
-   makes refusals measurable and points staff to the Operations team.
+4. **Refusals come from the prompt.** The prompt tells the model to answer
+   only from returned passages and, when they don't answer the question, to
+   open with a fixed sentence: *"I can't find this in NovaMart's
+   documentation."* The fixed phrase makes refusals measurable and points staff
+   to the Operations team. The search tool also has a cosine-similarity
+   threshold (`MIN_SCORE`, 0.60) that returns `NO_RELEVANT_POLICY` when no
+   passage clears it, but at 0.60 it never fires in the eval: "dogs in the
+   store" and "sick days" score 0.60–0.62, the same range as weak matches for
+   answerable questions (e.g. 0.624 for `warranty-and-protection#cancelling-a-plan`
+   on a tablet-return question). Every refusal in the eval was the model
+   following the prompt. The threshold is a placeholder until it is calibrated
+   or removed (see [What I would do with more time](#what-i-would-do-with-more-time)).
 5. **Citations are section ids and are validated.** Answers cite
    `[source: returns-and-refunds#electronics]` (several ids can share one tag).
    The eval and the web UI check that every cited id was actually returned by
@@ -197,9 +201,10 @@ Scam reports
    results file records the model. The judge uses `gemini-3.5-flash-lite`:
    grading against a reference answer is easier than answering, and it has its
    own quota.
-8. **Thinking turned off for testing (`GEMINI_THINKING_BUDGET=0`).** Private
-   reasoning before answering is the main driver of request time. The answers
-   need little reasoning (a date comparison, which fee applies), and on a
+8. **Thinking off by default (`GEMINI_THINKING_BUDGET=0`).** This is the
+   configuration the eval was run with, so the default is the tested setup.
+   Private reasoning before answering is the main driver of request time. The
+   answers need little reasoning (a date comparison, which fee applies), and on a
    free tier of about 20 requests a day, faster requests make it practical to
    change something and re-run. Not yet measured, but a larger budget (e.g.
    1024) would be expected to help the multi-step cases most (the
@@ -207,6 +212,7 @@ Scam reports
    lookups and refusals, make every request slower, and bill thinking tokens as
    output on a paid key. To try it for one terminal:
    `$env:GEMINI_THINKING_BUDGET = "1024"; python -m eval.run_eval --only mixed --no-judge`.
+   Set it empty (`GEMINI_THINKING_BUDGET=`) for the model's own default.
    Some models reject `0` (e.g. `gemini-3.5-flash-lite` returns
    `400 INVALID_ARGUMENT`); use a small positive budget there.
 
@@ -280,8 +286,9 @@ The 6 crucial cases cover one behaviour each:
 budget `0`, 1 worker: **6/6 passed** every deterministic check and both judge
 checks (`correct` and `grounded`): grounded 1/1, tool 2/2, mixed 1/1,
 refusal 2/2. The run (03:38) scored 5 cases before the daily quota ran out;
-`--resume` (03:57) ran the sixth and merged it in. 22 minutes in total, 21 chat
-and judge requests. Full output: `eval/results/20261121-040427.json`.
+`--resume` (03:57) ran the sixth and merged it in. 22 minutes in total, 20 chat
+and judge requests for the 6 scored cases. Full output:
+`eval/results/20261121-040427.json`.
 Abridged terminal output:
 
 ```text
@@ -342,6 +349,9 @@ What this run shows:
 
 - **Not yet run:** the 12 non-crucial cases. `--all` needs about 60
   requests, more than the free tier allows in a day.
+- **The relevance threshold doesn't filter anything at 0.60** (see
+  [Key decisions](#key-decisions) 4), so refusals depend entirely on the model
+  following the prompt.
 - **Nothing checks that an answer is consistent with itself.** Neither the
   deterministic checks nor the judge do, so an answer that opens with the wrong
   conclusion can pass (see Results).
@@ -369,9 +379,10 @@ What this run shows:
   cases over several runs, and catch the problem in the eval: give the judge a
   third rating, `consistent` (the answer leads with its conclusion and doesn't
   contradict itself). Confirm the citation fix over a few more runs.
-- **Calibrate the refusal threshold** on a labelled set of answerable and
-  unanswerable questions instead of a reasonable first guess (0.60); the helper
-  `python -m novamart.retrieval "<question>"` prints raw scores for this.
+- **Calibrate or remove the relevance threshold.** Score a labelled set of
+  answerable and unanswerable questions (`python -m novamart.retrieval
+  "<question>"` prints raw scores). If no cutoff separates them, drop the
+  threshold, or apply it to a reranker score instead of raw cosine similarity.
 - **Grow the eval set** from real historical tickets with the operations team,
   run each case several times to measure variance, add multi-turn and
   prompt-injection cases, tighten key-fact checks so traps are caught without

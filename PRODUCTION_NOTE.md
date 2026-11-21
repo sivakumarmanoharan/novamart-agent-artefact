@@ -46,9 +46,12 @@
 - **Governance**: Cloud Audit Logs for every tool call, a named business owner
   for content, a change process for prompts and models (versioned, reviewed, gated by
   the eval), and a clear escalation path to the operations team.
-- **Personas and access**: Using the roles NovaMart already manages as groups in
-  its identity provider (through Workforce Identity Federation), personas and accesses can be managed. A role decides which features and data an employee can use: for example, store staff can look up orders, while only supervisors could approve refunds once actions are added. The check is
-  enforced in the backend APIs and tools. In addition to the guarding of backend APIs, hiding buttons in the UI would help improve the user experience.
+- **Personas and access**: reuse the roles NovaMart already manages as groups
+  in its identity provider (through Workforce Identity Federation). A role
+  decides which features and data an employee can use: for example, store
+  staff can look up orders, while only supervisors can approve refunds once
+  actions are added. The check is enforced in the backend APIs and tools; the
+  UI also hides actions a role can't use, which is a convenience.
 
 ## 4. Evaluating and monitoring quality over time
 - **Before launch**: grow the golden set from real historical tickets with the
