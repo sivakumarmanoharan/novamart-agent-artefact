@@ -143,6 +143,15 @@ are per model), or enable billing.
 | `tests/test_offline.py`, `tests/test_quota.py`, `tests/test_eval_resilience.py` | Unit tests: chunking, tools, citations, eval checks, the agent loop against a scripted fake Gemini, quota and overload handling, the eval's pause/stop policy and `--resume` |
 | `PRODUCTION_NOTE.md` | How I would take this to production on Google Cloud |
 
+## Sample answers
+<img width="1656" height="855" alt="image" src="https://github.com/user-attachments/assets/a71cd40b-5c6f-436d-9828-c5f856c9fdea" />
+Correct answers
+<img width="1657" height="351" alt="image" src="https://github.com/user-attachments/assets/999c8540-d727-4f78-9ece-76a56e38024e" />
+Not in policy documents
+<img width="1650" height="371" alt="image" src="https://github.com/user-attachments/assets/5ea84fcc-322a-48bb-954e-7108ddeea78e" />
+Scam reports
+
+
 ## Key decisions
 
 1. **Google Gen AI SDK with a hand-written tool loop, not ADK.** The loop in
