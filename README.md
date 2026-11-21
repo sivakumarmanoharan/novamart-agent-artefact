@@ -87,11 +87,14 @@ page load is its own conversation. Answers show citations as tags, with any
 citation the search never returned flagged as unsupported; refusals are marked
 "Declined — not in documentation"; and a collapsible trace under each answer
 shows every tool call and its result. The sidebar has example questions, the
-mock orders and every policy section's citation id.
+mock orders, and the knowledge base: every policy section with its citation
+id, which opens to show the section's full text exactly as the agent searches
+it. Clicking a citation tag in an answer opens that section, so an answer can
+be checked against its source in one click.
 
 | Endpoint | What it does |
 |---|---|
-| `GET /api/info` | Model, today's date, threshold, examples, mock orders, policy sections |
+| `GET /api/info` | Model, today's date, threshold, examples, mock orders, policy sections with their full text |
 | `POST /api/ask` | `{"session", "question"}` → answer, refused flag, citations, unsupported citations, tool calls |
 | `POST /api/reset` | `{"session"}` → clears that conversation |
 

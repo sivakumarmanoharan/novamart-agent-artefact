@@ -75,7 +75,9 @@ class App:
                 for oid, o in self.toolbox.orders.items()
             ],
             "policies": [
-                {"source": c.id, "document": c.doc_title, "section": c.section}
+                # The full section text, so the UI can show exactly what the
+                # agent searches and cites (37 short sections, a few KB).
+                {"source": c.id, "document": c.doc_title, "section": c.section, "text": c.text}
                 for c in self.toolbox.index.chunks
             ],
         }
